@@ -1,11 +1,11 @@
 const express = require("express");
 const pool = require("../db");
-const authenticateToken = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
-// All routes require auth
-router.use(authenticateToken);
+// 🔻 REMOVE or COMMENT OUT this line
+// const authenticateToken = require("../middleware/authMiddleware");
+// router.use(authenticateToken);
 
 // Add item
 router.post("/", async (req, res) => {
