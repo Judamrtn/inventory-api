@@ -33,6 +33,32 @@ router.get("/", authenticateToken, async (req, res) => {
   }
 });
 
+// ✅ View items by username (public view)
+router.get("/:username", async (req, res) => {
+  try {
+    const { username } = req.params;
+
+    // Assuming you have a way to map username to user_id
+    const userResult = await pool.query("SELECT id FROM users WHERE username = $1", [username]);
+    
+    if (userResult.rowCount === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const user_id = userResult.rows[0].id;
+    const result = await pool.query("SELECT * FROM inventory WHERE user_id = $1", [user_id]);
+    
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "No items found for this user." });
+    }
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Fetch items by username error:", err);
+    res.status(500).json({ error: "Failed to fetch items" });
+  }
+});
+
 // ✅ Update item (only if owned by user)
 router.put("/:id", authenticateToken, async (req, res) => {
   try {
