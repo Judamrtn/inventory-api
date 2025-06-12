@@ -14,7 +14,7 @@ router.post("/", authenticateToken, async (req, res) => {
       [item_name, category, quantity, unit_price, user_id]
     );
 
-    res.status(201).json({ message: "Item added" });
+    res.status(201).json({ message: "Item added successfully" });
   } catch (err) {
     console.error("Add item error:", err);
     res.status(500).json({ error: "Failed to add item" });
@@ -25,7 +25,10 @@ router.post("/", authenticateToken, async (req, res) => {
 router.get("/", authenticateToken, async (req, res) => {
   try {
     const user_id = req.user.id;
-    const result = await pool.query("SELECT * FROM inventory WHERE user_id = $1", [user_id]);
+    const result = await pool.query(
+      "SELECT * FROM inventory WHERE user_id = $1 ORDER BY item_id DESC",
+      [user_id]
+    );
     res.json(result.rows);
   } catch (err) {
     console.error("Fetch items error:", err);
@@ -33,21 +36,26 @@ router.get("/", authenticateToken, async (req, res) => {
   }
 });
 
-// ✅ View items by username (public view)
+// ✅ View items by username (public view + includes username field)
 router.get("/:username", async (req, res) => {
   try {
     const { username } = req.params;
 
-    // Assuming you have a way to map username to user_id
     const userResult = await pool.query("SELECT id FROM users WHERE username = $1", [username]);
-    
     if (userResult.rowCount === 0) {
       return res.status(404).json({ error: "User not found" });
     }
 
     const user_id = userResult.rows[0].id;
-    const result = await pool.query("SELECT * FROM inventory WHERE user_id = $1", [user_id]);
-    
+
+    const result = await pool.query(`
+      SELECT i.*, u.username
+      FROM inventory i
+      JOIN users u ON i.user_id = u.id
+      WHERE i.user_id = $1
+      ORDER BY i.item_id DESC
+    `, [user_id]);
+
     if (result.rowCount === 0) {
       return res.status(404).json({ error: "No items found for this user." });
     }
@@ -72,10 +80,10 @@ router.put("/:id", authenticateToken, async (req, res) => {
     );
 
     if (result.rowCount === 0) {
-      return res.status(403).json({ error: "Not allowed or item not found" });
+      return res.status(403).json({ error: "Item not found or not authorized" });
     }
 
-    res.json({ message: "Item updated" });
+    res.json({ message: "Item updated successfully" });
   } catch (err) {
     console.error("Update item error:", err);
     res.status(500).json({ error: "Failed to update item" });
@@ -94,10 +102,10 @@ router.delete("/:id", authenticateToken, async (req, res) => {
     );
 
     if (result.rowCount === 0) {
-      return res.status(403).json({ error: "Not allowed or item not found" });
+      return res.status(403).json({ error: "Item not found or not authorized" });
     }
 
-    res.json({ message: "Item deleted" });
+    res.json({ message: "Item deleted successfully" });
   } catch (err) {
     console.error("Delete item error:", err);
     res.status(500).json({ error: "Failed to delete item" });
